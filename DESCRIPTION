@@ -1,0 +1,48 @@
+Type: Package
+Package: osdc
+Title: Open Source Diabetes Classifier for Danish Registers
+Version: 0.9.17
+Authors@R: c(
+    person(c("Signe", "Kirk"), "Brødbæk", , "signekb@clin.au.dk", role = "aut",
+           comment = c(ORCID = "0009-0000-2208-7088")),
+    person(c("Anders", "Aasted"), "Isaksen", , "andaas@rm.dk", role = "aut",
+           comment = c(ORCID = "0000-0001-8457-5466")),
+    person(c("Luke", "William"), "Johnston", , "lwjohnst@gmail.com", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0003-4169-2616")),
+    person("Steno Diabetes Center Aarhus", role = "cph"),
+    person("Aarhus University", role = "cph")
+  )
+Description: The algorithm first identifies a population of individuals from 
+    Danish register data with any type of diabetes as individuals with two or
+    more inclusion events. Then, it splits this population into individuals with
+    either type 1 diabetes or type 2 diabetes by identifying individuals with
+    type 1 diabetes and classifying the remainder of the diabetes population as
+    having type 2 diabetes.
+License: MIT + file LICENSE
+URL: https://github.com/steno-aarhus/osdc,
+        https://steno-aarhus.github.io/osdc/
+BugReports: https://github.com/steno-aarhus/osdc/issues
+Depends: R (>= 4.2.0)
+Imports: checkmate, cli, codeCollection, dbplyr, dplyr, duckplyr,
+        fabricatr, lifecycle, lubridate, purrr, rlang, rvest, stats,
+        tidyselect, utils
+Suggests: glue, knitr, quarto, rmarkdown, spelling, stringr, testthat
+        (>= 3.0.0), tidyr, tibble
+VignetteBuilder: quarto
+Config/testthat/edition: 3
+Encoding: UTF-8
+Language: en-US
+RoxygenNote: 7.3.3
+NeedsCompilation: no
+Packaged: 2025-12-04 21:14:55 UTC; luke
+Author: Signe Kirk Brødbæk [aut] (ORCID:
+    <https://orcid.org/0009-0000-2208-7088>),
+  Anders Aasted Isaksen [aut] (ORCID:
+    <https://orcid.org/0000-0001-8457-5466>),
+  Luke William Johnston [aut, cre] (ORCID:
+    <https://orcid.org/0000-0003-4169-2616>),
+  Steno Diabetes Center Aarhus [cph],
+  Aarhus University [cph]
+Maintainer: Luke William Johnston <lwjohnst@gmail.com>
+Repository: CRAN
+Date/Publication: 2025-12-10 21:20:02 UTC

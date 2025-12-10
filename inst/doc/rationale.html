@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.26">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Rationale</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+width: 0.8em;
+margin: 0 0.8em 0.2em -1em;  vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+
+div.csl-bib-body { }
+div.csl-entry {
+clear: both;
+}
+.hanging-indent div.csl-entry {
+margin-left:2em;
+text-indent:-2em;
+}
+div.csl-left-margin {
+min-width:2em;
+float:left;
+}
+div.csl-right-inline {
+margin-left:2em;
+padding-left:1em;
+}
+div.csl-indent {
+margin-left: 2em;
+}</style>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+</style>
+</head>
+
+<body>
+
+
+<header id="title-block-header">
+<h1 class="title">Rationale</h1>
+
+</header>
+
+
+<p>This document explains the rationale behind the development of this algorithm. Many of these text were taken from Anders Aasted Isaksen’s <a href="https://aastedet.github.io/dissertation/">PhD Thesis</a> as well as the validation paper <span class="citation" data-cites="Isaksen2023">(1)</span>. This document is a shorter and more concise version of those documents. We cover the:</p>
+<ul>
+<li>Current state of how diabetes is identified in Danish healthcare registers.</li>
+<li>Challenges faced by researchers in this area, such as the limited transparency in how diabetes is exactly classified in these sources and how applying or using these approaches isn’t very easy.</li>
+<li>How this algorithm and package contributes to discussions in this space about how diabetes in classified in Danish register research and how it is implemented.</li>
+</ul>
+<h2 id="identifying-type-1-and-2-diabetes-cases-in-danish-healthcare-registers">Identifying type 1 and 2 diabetes cases in Danish healthcare registers</h2>
+<h3 id="danish-register-data-infrastructure">Danish register data infrastructure</h3>
+<p>Many individual-level data (e.g. civil registration, public healthcare contacts, and drug prescriptions) are automatically collected on all residents in Denmark and stored in nationwide Danish registers by Statistics Denmark (<code>www.dst.dk</code>, URL often hits redirect limits, so we can’t link directly) and the <a href="https://sundhedsdatastyrelsen.dk">Danish Health Data Authority</a>. These agencies are legally allowed to give access to the register data for research purposes, which provides (authorized) researchers a set of common, extensive data sources to use for studies. Any researcher associated with an approved Danish research institute (mainly Danish universities) can apply for access, but fees and conditions apply.</p>
+<p>Register data is generally accessed and processed by approved researchers on remote servers operated by Statistics Denmark and the Danish Health Data Authority. The same raw data used by all researchers, coupled with a common virtual working environment, has the potential to enable reproducible research. This means that any data processing workflow could be transferable and reusable between research projects if the underlying code is designed with reproducibility in mind and the code is shared (“open-sourced”) <span class="citation" data-cites="Marszalek2016">(2)</span>. While reproducibility in research relates to transparent reporting of methods to enable others to reproduce analyses and experiments, this also applies to a diabetes classification program, which - if reproducible - could be reused by any researcher with access to the necessary register data to dynamically identify a study population of individuals with diabetes for their research needs <span class="citation" data-cites="Dima2017">(3)</span>.</p>
+<h3 id="current-danish-register-based-diabetes-classifiers">Current Danish register-based diabetes classifiers</h3>
+<p>In Denmark, the National Diabetes Register, established in 2006, was the first resource readily available to researchers to use for identifying diabetes cases through register data <span class="citation" data-cites="Carstensen2011">(4)</span> . However, it was discontinued in 2012.</p>
+<p>The next resource is the <a href="https://www.esundhed.dk/Dokumentation/DocumentationExtended?id=29">Register of Selected Chronic Diseases</a> (RSCD), which was launched in 2014. It is currently the only publicly available resource to identify diabetes cases through Danish register data (by application to the Danish Health Data Authority).</p>
+<h2 id="challenges-in-current-classifiers">Challenges in current classifiers</h2>
+<p>General-purpose registers and other administrative databases often provide the basis of diabetes epidemiology, but they rarely contain validated diabetes-specific data, which may introduce bias in studies using this data. It is important to have an accurate tool to identify individuals with diabetes in the registers, as findings may differ with various diabetes definitions <span class="citation" data-cites="Nielsen2014 Rawshani2014">(5,6)</span>. Considerable efforts have been made towards establishing such a tool for diabetes research in several countries, including Denmark <span class="citation" data-cites="Bak2021 HallgrenElfgren2016 Cooper2013">(7–9)</span>.</p>
+<p>In a general population, classification algorithms (classifiers) need to not only identify type 1 diabetes as well as type 2 diabetes, but also account for events that might lead to inclusion of non-cases, such as the use of glucose-lowering drugs in the treatment of other conditions. Currently, no type-specific diabetes classifier has been validated in a general population, which leaves register-based studies in this area vulnerable to biases.</p>
+<p>In Denmark, a limitation (or flaw) of the RSCD is that it has not been publicly validated and the source code behind the algorithm has not been made publicly available. Notably, the algorithm lacks inclusion based on elevated HbA1c levels <span class="citation" data-cites="DHDA2016">(10)</span>. Likewise, the National Diabetes Register, since discontinued in 2012, had a validation study question its validity and called for future registers to adopt inclusion based on elevated HbA1c levels <span class="citation" data-cites="Green2014">(11)</span>.</p>
+<p>Since the launch of the RSCD, nationwide laboratory data on HbA1c testing has become available in the Danish register ecosystem <span class="citation" data-cites="DHDA2018">(12)</span>, but this data is yet to be incorporated into available diabetes classifiers.</p>
+<h2 id="diabetes-classification-algorithms">Diabetes classification algorithms</h2>
+<p>The currently available register-based diabetes classifiers have yet to incorporate the emerging register data on routine HbA1c testing. Wishing to take advantage of this data, we developed the Open Source Diabetes Classifier (OSDC). Detailed discussion of the advantages and disadvantages of it’s design is found in Anders Aasted Isaksen’s thesis, in the chapter on <a href="https://aastedet.github.io/dissertation/5-discussion-methods.html">discussing the methods</a>.</p>
+<p>We aimed on developing this algorithm to:</p>
+<ol type="1">
+<li>Stimulate discussion within Denmark on the openness and ease of use of existing classifiers or diabetes registers, and on the need for an official process for updating or contributing to existing data sources on diabetes status. This algorithm and package may end up not being used by official institutions, but it can serve as a starting point on how to improve the current state of diabetes classification in Denmark or as an inspiration for how they might be designed.</li>
+<li>Provide an open-source, code-based algorithm as an R package to classify type 1 and type 2 diabetes based on data from Danish registers. We implemented it as an R package so that researchers can easily build their own database of individuals with diabetes more quickly than waiting for an official source to be implemented.</li>
+</ol>
+<h2 class="unnumbered" id="references">References</h2>
+<div id="refs" class="references csl-bib-body" role="list">
+<div id="ref-Isaksen2023" class="csl-entry" role="listitem">
+<div class="csl-left-margin">1. </div><div class="csl-right-inline">Isaksen AA, Sandbæk A, Bjerg L. <a href="https://doi.org/10.2147/clep.s407019">Validation of register-based diabetes classifiers in danish data</a>. Clinical Epidemiology. 2023 May;Volume 15:569–81. </div>
+</div>
+<div id="ref-Marszalek2016" class="csl-entry" role="listitem">
+<div class="csl-left-margin">2. </div><div class="csl-right-inline">Marszalek RT, Flintoft L. <a href="https://doi.org/10.1186/s13059-016-1040-y">Being open: Our policy on source code</a>. Genome Biology. 2016;17(1):172. </div>
+</div>
+<div id="ref-Dima2017" class="csl-entry" role="listitem">
+<div class="csl-left-margin">3. </div><div class="csl-right-inline">Dima AL, Dediu D. <a href="https://doi.org/10.1371/journal.pone.0174426">Computation of adherence to medication and visualization of medication histories in r with AdhereR: Towards transparent and reproducible use of electronic healthcare data</a>. PLoS One. 2017;12(4):e0174426. </div>
+</div>
+<div id="ref-Carstensen2011" class="csl-entry" role="listitem">
+<div class="csl-left-margin">4. </div><div class="csl-right-inline">Carstensen B, Kristensen JK, Marcussen MM, Borch-Johnsen K. <a href="https://doi.org/10.1177/1403494811404278">The national diabetes register</a>. Scand J Public Health. 2011;39(7 Suppl):58–61. </div>
+</div>
+<div id="ref-Nielsen2014" class="csl-entry" role="listitem">
+<div class="csl-left-margin">5. </div><div class="csl-right-inline">Nielsen AA, Christensen H, Lund ED, Christensen C, Brandslund I, Green A. Diabetes mortality differs between registers due to various disease definitions. Dan Med J. 2014;61(5):A4840. </div>
+</div>
+<div id="ref-Rawshani2014" class="csl-entry" role="listitem">
+<div class="csl-left-margin">6. </div><div class="csl-right-inline">Rawshani A, Landin-Olsson M, Svensson AM, Nyström L, Arnqvist HJ, Bolinder J, et al. <a href="https://doi.org/10.1007/s00125-014-3225-9">The incidence of diabetes among 0-34 year olds in sweden: New data and better methods</a>. Diabetologia. 2014;57(7):1375–81. </div>
+</div>
+<div id="ref-Bak2021" class="csl-entry" role="listitem">
+<div class="csl-left-margin">7. </div><div class="csl-right-inline">Bak JCG, Serné EH, Kramer MHH, Nieuwdorp M, Verheugt CL. <a href="https://doi.org/10.1007/s00592-020-01576-8">National diabetes registries: Do they make a difference?</a> Acta Diabetologica. 2021;58(3):267–78. </div>
+</div>
+<div id="ref-HallgrenElfgren2016" class="csl-entry" role="listitem">
+<div class="csl-left-margin">8. </div><div class="csl-right-inline">Hallgren Elfgren I-M, Grodzinsky E, Törnvall E. <a href="https://doi.org/10.1017/S1463423616000098">The swedish national diabetes register in clinical practice and evaluation in primary health care</a>. Primary Health Care Research &amp;amp; Development. 2016;17(6):549–58. </div>
+</div>
+<div id="ref-Cooper2013" class="csl-entry" role="listitem">
+<div class="csl-left-margin">9. </div><div class="csl-right-inline">Cooper JG, Thue G, Claudi T, Løvaas K, Carlsen S, Sandberg S. The norwegian diabetes register for adults – an overview of the first years. Norsk Epidemiologi [Internet]. 2013;23(1). Available from: <a href="https://www.ntnu.no/ojs/index.php/norepid/article/view/1599">https://www.ntnu.no/ojs/index.php/norepid/article/view/1599</a></div>
+</div>
+<div id="ref-DHDA2016" class="csl-entry" role="listitem">
+<div class="csl-left-margin">10. </div><div class="csl-right-inline">Danish Health Data Authority. <span class="nocase">Algoritmer for udvalgte kroniske sygdomme og svære psykiske lidelser [English: Algorithms for selected chronic diseases and serious mental illnesses]</span> [Internet]. 2016. Available from: <a href="https://www.esundhed.dk/-/media/Files/Publikationer/Emner/Operationer-og-diagnoser/Udvalgte-kroniske-sygdomme-svaere-psykiske-lidelser/Algoritmer-for-Udvalgte-Kroniske-Sygdomme-og-svre-psykiske-lidelser.ashx">https://www.esundhed.dk/-/media/Files/Publikationer/Emner/Operationer-og-diagnoser/Udvalgte-kroniske-sygdomme-svaere-psykiske-lidelser/Algoritmer-for-Udvalgte-Kroniske-Sygdomme-og-svre-psykiske-lidelser.ashx</a></div>
+</div>
+<div id="ref-Green2014" class="csl-entry" role="listitem">
+<div class="csl-left-margin">11. </div><div class="csl-right-inline">Green A, Sortsø C, Jensen PB, Emneus M. Validation of the danish national diabetes register. Clinical epidemiology [Internet]. 2014;7:5–15. Available from: <a href="https://pubmed.ncbi.nlm.nih.gov/25565889/">https://pubmed.ncbi.nlm.nih.gov/25565889/</a></div>
+</div>
+<div id="ref-DHDA2018" class="csl-entry" role="listitem">
+<div class="csl-left-margin">12. </div><div class="csl-right-inline">Danish Health Data Authority. <span class="nocase">Dokumentation af Laboratoriedatabasens Forskertabel [English: Documentation on Register of Laboratory Results for Research]</span> [Internet]. 2018. Available from: <a href="https://sundhedsdatastyrelsen.dk/data-og-registre/nationale-sundhedsregistre/laboratoriedatabasen">https://sundhedsdatastyrelsen.dk/data-og-registre/nationale-sundhedsregistre/laboratoriedatabasen</a></div>
+</div>
+</div>
+
+
+
+
+
+</body></html>

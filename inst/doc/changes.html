@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.26">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Changes from original</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+width: 0.8em;
+margin: 0 0.8em 0.2em -1em;  vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+</style>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+</style>
+</head>
+
+<body>
+
+
+<header id="title-block-header">
+<h1 class="title">Changes from original</h1>
+
+</header>
+
+
+<p>In this vignette, you’ll find a description of the changes that have been made to the OSDC algorithm since its <a href="https://doi.org/10.2147/CLEP.S407019">original validation</a>. The osdc package uses the latest changes to the algorithm. Potential changes to the algorithm, rather than the specific implementation and code details, that we might in the future will also be described in this vignette. We will also provide validation metrics here whenever we make a change, and track these validations over the different versions.</p>
+<h2 id="specific-changes-since-the-original-validation-version-from-the-paper">Specific changes since the original validation (version from the paper)</h2>
+<h3 id="version-1.0">Version 1.0</h3>
+<ol type="1">
+<li>Purchases of GLP1-RA, dapagliflozin or empagliflozin are no longer used for inclusion nor type-classification.
+<ul>
+<li>Due to increasing use in treatment of non-diabetes.</li>
+</ul></li>
+<li>For T1D classification, the window of 180 days to make a purchase of an insulin is now evaluated from the date of the first purchase of a glucose-lowering drug, rather than the date of inclusion.
+<ul>
+<li>To simplify computations and increase robustness to noise and atypical cases.</li>
+</ul></li>
+<li>Purchases of insulin in the previous year is no longer required for T1D classification.
+<ul>
+<li>Because we found that the vast majority of individuals classified as T2D due to this criteria, reported that they had T1D in the data from Health in Central Denmark.</li>
+</ul></li>
+<li>The logic defining pregnancy index dates has been simplified to only use diagnoses of pregnancy endings (no longer uses data on maternal care visits).
+<ul>
+<li>For the sake of simplicity, as we found no impact on classification accuracy in the Health in Central Denmark data.</li>
+</ul></li>
+<li>HbA1c samples taken on the same date are de-duplicated.
+<ul>
+<li>To better align with <a href="https://apps.who.int/iris/handle/10665/70523">recommended diagnostic practice</a> (in the original implementation, only samples taken at the exact same time were de-duplicated)</li>
+</ul></li>
+</ol>
+<h2 id="validity">Validity</h2>
+<p>The validity of the OSDC algorithm is tested against self-reported diabetes type in the Health in Central Denmark survey. The results are reported as overall PPV (positive predictive value) and sensitivity for each version of the algorithm and within subsets of the diabetes population reporting onset of diabetes before or after age 40, respectively, similar to tables 1 &amp; 2 of the original validation paper <span class="citation" data-cites="Isaksen2023">[@Isaksen2023]</span>.</p>
+<h3 id="validity-in-2019">Validity in 2019</h3>
+<p>This uses the same data as <a href="https://doi.org/10.2147/CLEP.S407019">the original validation paper</a> and provides a direct comparison to the original implementation.</p>
+<h4 id="stratified-by-diabetes-type-and-age-at-onset">Stratified by diabetes type and age at onset</h4>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th>Version</th>
+<th>Diabetes type</th>
+<th>PPV</th>
+<th>Sensitivity</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Paper</td>
+<td>T1D</td>
+<td>0.943</td>
+<td>0.773</td>
+</tr>
+<tr class="even">
+<td>Paper</td>
+<td>T1D &gt;40 yrs</td>
+<td>0.708</td>
+<td>0.378</td>
+</tr>
+<tr class="odd">
+<td>Paper</td>
+<td>T2D</td>
+<td>0.875</td>
+<td>0.944</td>
+</tr>
+<tr class="even">
+<td>Paper</td>
+<td>T2D &lt;40 yrs</td>
+<td>0.471</td>
+<td>0.863</td>
+</tr>
+</tbody>
+</table>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th>Version</th>
+<th>Diabetes type</th>
+<th>PPV</th>
+<th>Sensitivity</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1.0</td>
+<td>T1D</td>
+<td>0.944</td>
+<td>0.783</td>
+</tr>
+<tr class="even">
+<td>1.0</td>
+<td>T1D &gt;40 yrs</td>
+<td>0.708</td>
+<td>0.378</td>
+</tr>
+<tr class="odd">
+<td>1.0</td>
+<td>T2D</td>
+<td>0.879</td>
+<td>0.944</td>
+</tr>
+<tr class="even">
+<td>1.0</td>
+<td>T2D &lt;40 yrs</td>
+<td>0.480</td>
+<td>0.863</td>
+</tr>
+</tbody>
+</table>
+<h4 id="bootstrapped-metrics">Bootstrapped metrics</h4>
+<p>Corresponds to supplementary table S3 of the validation paper.</p>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th>Version</th>
+<th>Diabetes type</th>
+<th>Sensitivity</th>
+<th>Specificity</th>
+<th>PPV</th>
+<th>NPV</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Paper</td>
+<td>T1D</td>
+<td>0.774</td>
+<td>0.999</td>
+<td>0.951</td>
+<td>0.997</td>
+</tr>
+<tr class="even">
+<td>Paper</td>
+<td>T2D</td>
+<td>0.943</td>
+<td>0.989</td>
+<td>0.878</td>
+<td>0.995</td>
+</tr>
+</tbody>
+</table>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th>Version</th>
+<th>Diabetes type</th>
+<th>Sensitivity</th>
+<th>Specificity</th>
+<th>PPV</th>
+<th>NPV</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1.0</td>
+<td>T1D</td>
+<td>0.788</td>
+<td>0.999</td>
+<td>0.947</td>
+<td>0.997</td>
+</tr>
+<tr class="even">
+<td>1.0</td>
+<td>T2D</td>
+<td>0.940</td>
+<td>0.990</td>
+<td>0.881</td>
+<td>0.995</td>
+</tr>
+</tbody>
+</table>
+<h3 id="validity-in-2025">Validity in 2025</h3>
+<p>This section will contain metrics from validation performed in subsequent survey waves of Health in Central Denmark, as this data becomes available.</p>
+<h2 id="potential-future-changes">Potential future changes</h2>
+<ol type="1">
+<li>Add support for using medical birth register to define pregnancies to censor gestational diabetes (GDM). This will allow for the censoring of glucose-lowering drug (GLD) purchases all the way back to 1995 (rather than 1997 onward, as the obstetric codes are limited to), and enable the extension of the window of valid dates of diagnosis to 1996 onward.</li>
+<li>Limit the historic scope of primary diagnoses used to evaluate majority of diabetes-specific diagnoses in type classification (e.g. only evaluate majority among the last five type-specific diabetes diagnoses).</li>
+</ol>
+
+
+
+
+
+</body></html>

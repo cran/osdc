@@ -211,156 +211,282 @@ text-decoration: underline; }
 </header>
 
 
+<h2 id="what-does-this-package-do">What does this package do?</h2>
+<p>The osdc (Open Source Diabetes Classifier) package classifies individuals as having type 1 diabetes (T1D) or type 2 diabetes (T2D) based on Danish register data. You provide the register data, and the package returns a data table of individuals identified as having diabetes, along with their diabetes type (T1D or T2D) and the date of the classification.</p>
 <p>This package serves two overarching purposes:</p>
 <ol type="1">
 <li>To provide an open-source, code-based algorithm to classify type 1 and type 2 diabetes using Danish registers as data sources.</li>
 <li>To inspire discussions within the Danish register-based research space on the openness and ease of use on the existing tooling and registers, and on the need for an official process for updating or contributing to existing data sources.</li>
 </ol>
-<p>To read up on the overall design of this package as well as on the algorithm, check out the <code>vignette(&quot;design&quot;)</code>. For more explanation on the motivations, rationale, and needs for this algorithm and package, check out the <code>vignette(&quot;rationale&quot;)</code>. To see the specific data needed for this package and algorithm, see <code>vignette(&quot;data-sources&quot;)</code>.</p>
-<h2 id="usage">Usage</h2>
-<p>First, let’s load the package, as well as <a href="https://duckplyr.tidyverse.org/index.html">duckplyr</a> since we require the data to be in the <a href="https://duckdb.org/">DuckDB</a> format. See the <code>vignette(&quot;design&quot;)</code> for some reasons why.</p>
+<p>For a detailed description of the algorithm, see <code>vignette(&quot;algorithm&quot;)</code>. For the motivations and rationale behind this package, see <code>vignette(&quot;rationale&quot;)</code>. For a full list of required register variables, see <code>vignette(&quot;data-sources&quot;)</code>.</p>
+<h2 id="step-by-step-usage">Step-by-step usage</h2>
+<p>This section walks through the full workflow: loading the package, preparing data, running the classification, as well as understanding and saving the output. We use simulated data here, but the same or similar steps apply to real register data. For more information on using osdc on real register data, see <a href="#sec-working-with-real-register-data" class="quarto-xref">Section 3</a>.</p>
+<h3 id="step-1-install-and-load-the-package">Step 1: Install and load the package</h3>
+<p>First, you need to install and load the package:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(osdc)</span></code></pre></div>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># install.packages(&quot;osdc&quot;)</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(osdc)</span></code></pre></div>
 </div>
-<p>The core of this package depends on the list of variables within different registers that are needed in order to classify the diabetes status of an individual. This can be found in the list:</p>
+<h3 id="step-2-check-which-registers-are-needed">Step 2: Check which registers are needed</h3>
+<p>The algorithm requires data from multiple Danish registers. The names of these registers can be seen below:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Only showing first 2</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">registers</span>() <span class="sc">|&gt;</span> </span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">head</span>(<span class="dv">2</span>)</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; $bef</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; $bef$name</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] &quot;CPR-registerets befolkningstabel&quot;</span></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; $bef$start_year</span></span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] 1968</span></span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; $bef$end_year</span></span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] NA</span></span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; $bef$variables</span></span>
-<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; # A tibble: 3 × 4</span></span>
-<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   name      danish_description         english_description             data_type</span></span>
-<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   &lt;chr&gt;     &lt;chr&gt;                      &lt;chr&gt;                           &lt;list&gt;   </span></span>
-<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1 pnr       Pseudonymiseret cpr-nummer Pseudonymised social security … &lt;chr [1]&gt;</span></span>
-<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2 koen      Koen                       Gender/sex                      &lt;chr [1]&gt;</span></span>
-<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 foed_dato Foedselsdato               Date of birth                   &lt;chr [2]&gt;</span></span>
-<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; $lmdb</span></span>
-<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; $lmdb$name</span></span>
-<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Laegemiddelstatistikregisteret&quot;</span></span>
-<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; $lmdb$start_year</span></span>
-<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] 1995</span></span>
-<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; $lmdb$end_year</span></span>
-<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] NA</span></span>
-<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; $lmdb$variables</span></span>
-<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; # A tibble: 6 × 4</span></span>
-<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   name   danish_description                 english_description        data_type</span></span>
-<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   &lt;chr&gt;  &lt;chr&gt;                              &lt;chr&gt;                      &lt;list&gt;   </span></span>
-<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1 pnr    Pseudonymiseret cpr-nummer         Pseudonymised social secu… &lt;chr [1]&gt;</span></span>
-<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2 eksd   Ekspeditionsdato                   Date of purchase           &lt;chr [2]&gt;</span></span>
-<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 atc    ATC-kode (fuldt specificeret)      ATC code (fully specified) &lt;chr [1]&gt;</span></span>
-<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4 volume Antal standarddoser (DDD) i pakken Number of daily standard … &lt;chr [1]&gt;</span></span>
-<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5 apk    Antal pakker koebt                 Number of packages purcha… &lt;chr [1]&gt;</span></span>
-<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 6 indo   Indikationskode for recept         Indication code            &lt;chr [1]&gt;</span></span></code></pre></div>
+<div class="cell-output-display">
+<table class="caption-top">
+<colgroup>
+<col style="width: 29%">
+<col style="width: 70%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Register abbreviation</th>
+<th style="text-align: left;">Register name</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">bef</td>
+<td style="text-align: left;">CPR-registerets befolkningstabel</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">lmdb</td>
+<td style="text-align: left;">Laegemiddelstatistikregisteret</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">lpr_adm</td>
+<td style="text-align: left;">Landspatientregisterets administrationstabel (LPR2)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">lpr_diag</td>
+<td style="text-align: left;">Landspatientregisterets diagnosetabel (LPR2)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">lpr3a_kontakt</td>
+<td style="text-align: left;">Landspatientregisterets kontakttabel (LPR3A)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">lpr3a_diagnose</td>
+<td style="text-align: left;">Landspatientregisterets diagnosetabel (LPR3A)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">lpr3f_kontakter</td>
+<td style="text-align: left;">Landspatientregisterets kontakttabel (LPR3F)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">lpr3f_diagnoser</td>
+<td style="text-align: left;">Landspatientregisterets diagnosetabel (LPR3F)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">sysi</td>
+<td style="text-align: left;">Sygesikringsregisteret</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">sssy</td>
+<td style="text-align: left;">Sygesikringsregisteret</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">lab_forsker</td>
+<td style="text-align: left;">Laboratoriedatabasens forskertabel</td>
+</tr>
+</tbody>
+</table>
 </div>
-<p>We can see the list of registers we need with:</p>
+</div>
+<p>For a table showing the specific variables needed from each register, see <code>vignette(&quot;data-sources&quot;)</code>.</p>
+<div>
+<blockquote>
+<p><strong>Important</strong></p>
+<p>To use the osdc algorithm, you need to have all the variables described in <code>vignette(&quot;data-sources&quot;)</code>, so please ensure that you have the required variables before continuing.</p>
+</blockquote>
+</div>
+<h3 id="step-3-prepare-the-data">Step 3: Prepare the data</h3>
+<p>The package requires data to be in <a href="https://duckdb.org/">DuckDB</a> format, which is a high-performance database format that can handle the large volumes of data without loading everything into memory at once. See <code>vignette(&quot;design&quot;)</code> for more on why we use DuckDB.</p>
+<p>For this example, we generate simulated register data using <code>simulate_registers()</code> and then convert it to DuckDB format:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">registers</span>() <span class="sc">|&gt;</span> </span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">names</span>()</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] &quot;bef&quot;         &quot;lmdb&quot;        &quot;lpr_adm&quot;     &quot;lpr_diag&quot;    &quot;kontakter&quot;  </span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [6] &quot;diagnoser&quot;   &quot;sysi&quot;        &quot;sssy&quot;        &quot;lab_forsker&quot;</span></span></code></pre></div>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>register_data <span class="ot">&lt;-</span> <span class="fu">registers</span>() <span class="sc">|&gt;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">names</span>() <span class="sc">|&gt;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">simulate_registers</span>() <span class="sc">|&gt;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  purrr<span class="sc">::</span><span class="fu">map</span>(duckplyr<span class="sc">::</span>as_duckdb_tibble) <span class="sc">|&gt;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Convert to a DuckDB connection, as duckplyr is still</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="co"># in early development, while the DBI-DuckDB connection</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="co"># is more stable.</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  purrr<span class="sc">::</span><span class="fu">map</span>(duckplyr<span class="sc">::</span>as_tbl)</span></code></pre></div>
 </div>
-<p>Let’s create a fake dataset to show how to use the classification. We have a helper function <code>simulate_registers()</code> that takes a vector of register names and outputs a list of registers with simulated data. Because of the way that DuckDB connections work, we have to either load the data directly from a file as a DuckDB table, or convert a tibble into a DuckDB table. So we’ll do that right after simulating the data.</p>
+<p>The result is a named list where each element is one register as a DuckDB table. The LPR data spans multiple versions (LPR2 and LPR3) that need to be prepared and joined into a single table before being used as input for <code>classify_diabetes()</code>. The same goes for the health service registers (SSSY, and SYSI). osdc provides helper functions for this:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>register_data <span class="ot">&lt;-</span> <span class="fu">registers</span>() <span class="sc">|&gt;</span> </span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">names</span>() <span class="sc">|&gt;</span> </span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">simulate_registers</span>() <span class="sc">|&gt;</span> </span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  purrr<span class="sc">::</span><span class="fu">map</span>(duckplyr<span class="sc">::</span>as_duckdb_tibble) <span class="sc">|&gt;</span> </span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Convert to a DuckDB connection, as duckplyr is still</span></span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="co"># in early development, while the DBI-DuckDB connection</span></span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="co"># is more stable.</span></span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  purrr<span class="sc">::</span><span class="fu">map</span>(duckplyr<span class="sc">::</span>as_tbl) </span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Show only the first two items.</span></span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>register_data <span class="sc">|&gt;</span> </span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">head</span>(<span class="dv">2</span>)</span>
-<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; $bef</span></span>
-<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; # Source:   table&lt;as_tbl_duckplyr_Ms0qNyXTJO&gt; [?? x 3]</span></span>
-<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; # Database: DuckDB 1.4.3 [luke@Linux 6.14.0-37-generic:R 4.5.2//tmp/RtmpFF0saa/duckplyr/duckplyr1000d4e5f1400.duckdb]</span></span>
-<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     koen pnr          foed_dato</span></span>
-<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;    &lt;int&gt; &lt;chr&gt;        &lt;chr&gt;    </span></span>
-<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  1     2 108684730664 19320112 </span></span>
-<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  2     1 982144017357 20070716 </span></span>
-<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  3     1 672580814975 19800805 </span></span>
-<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  4     1 439008110445 20090628 </span></span>
-<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  5     2 489714666740 20170225 </span></span>
-<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  6     1 155331797020 19730330 </span></span>
-<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  7     2 777951655096 19341022 </span></span>
-<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  8     2 167007504860 20010318 </span></span>
-<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  9     2 132473802596 19530901 </span></span>
-<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 10     1 876820784981 19310817 </span></span>
-<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; # ℹ more rows</span></span>
-<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; $diagnoser</span></span>
-<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; # Source:   table&lt;as_tbl_duckplyr_VDkIxarsMS&gt; [?? x 4]</span></span>
-<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; # Database: DuckDB 1.4.3 [luke@Linux 6.14.0-37-generic:R 4.5.2//tmp/RtmpFF0saa/duckplyr/duckplyr1000d4e5f1400.duckdb]</span></span>
-<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;    dw_ek_kontakt      diagnosekode diagnosetype senere_afkraeftet</span></span>
-<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;    &lt;chr&gt;              &lt;chr&gt;        &lt;chr&gt;        &lt;chr&gt;            </span></span>
-<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  1 920166254345774467 DX7621       B            Nej              </span></span>
-<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  2 075972782062569784 DZ832        B            Ja               </span></span>
-<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  3 176536283003603061 DQ796        A            Nej              </span></span>
-<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  4 581624294965046227 DN764E       A            Nej              </span></span>
-<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  5 814210282344580857 DB260        B            Nej              </span></span>
-<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  6 393885735973313484 DM13         B            Nej              </span></span>
-<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  7 836179506546686729 DZ52         B            Ja               </span></span>
-<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  8 814175436846538799 DQ666D       B            Nej              </span></span>
-<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  9 508133593881487375 DK660C       A            Nej              </span></span>
-<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 10 325077063891132755 DT559B       B            Nej              </span></span>
-<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; # ℹ more rows</span></span></code></pre></div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>lpr <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">prepare_lpr2</span>(register_data<span class="sc">$</span>lpr_adm, register_data<span class="sc">$</span>lpr_diag),</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">prepare_lpr3f</span>(register_data<span class="sc">$</span>lpr3f_kontakter, register_data<span class="sc">$</span>lpr3f_diagnoser),</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">prepare_lpr3a</span>(register_data<span class="sc">$</span>lpr3a_kontakt, register_data<span class="sc">$</span>lpr3a_diagnose)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">join_registers</span>()</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>hsr <span class="ot">&lt;-</span> <span class="fu">list</span>(register_data<span class="sc">$</span>sssy, register_data<span class="sc">$</span>sysi) <span class="sc">|&gt;</span> <span class="fu">join_registers</span>()</span></code></pre></div>
 </div>
-<p>Now we can run the <code>classify_diabetes()</code> on the simulated data. Because we use DuckDB, in order to “materialize” the data into R, you need to use <code>dplyr::collect()</code>.</p>
+<p>The remaining registers are extracted from the <code>register_data</code> list, so they are ready to be passed as arguments to <code>classify_diabetes()</code>:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>bef <span class="ot">&lt;-</span> register_data<span class="sc">$</span>bef</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>lmdb <span class="ot">&lt;-</span> register_data<span class="sc">$</span>lmdb</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>lab_forsker <span class="ot">&lt;-</span> register_data<span class="sc">$</span>lab_forsker</span></code></pre></div>
+</div>
+<h3 id="step-4-run-the-classification">Step 4: Run the classification</h3>
+<p>Now, we’re ready to run the classification algorithm. Pass each register to <code>classify_diabetes()</code>:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>classified_diabetes <span class="ot">&lt;-</span> <span class="fu">classify_diabetes</span>(</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">kontakter =</span> register_data<span class="sc">$</span>kontakter,</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">diagnoser =</span> register_data<span class="sc">$</span>diagnoser,</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">lpr_diag =</span> register_data<span class="sc">$</span>lpr_diag,</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">lpr_adm =</span> register_data<span class="sc">$</span>lpr_adm,</span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">sysi =</span> register_data<span class="sc">$</span>sysi,</span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">sssy =</span> register_data<span class="sc">$</span>sssy,</span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">lab_forsker =</span> register_data<span class="sc">$</span>lab_forsker,</span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">bef =</span> register_data<span class="sc">$</span>bef,</span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">lmdb =</span> register_data<span class="sc">$</span>lmdb</span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span> </span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">collect</span>()</span>
-<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>classified_diabetes</span>
-<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; # A tibble: 8 × 5</span></span>
-<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   pnr          stable_inclusion_date raw_inclusion_date has_t1d has_t2d</span></span>
-<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   &lt;chr&gt;        &lt;date&gt;                &lt;date&gt;             &lt;lgl&gt;   &lt;lgl&gt;  </span></span>
-<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1 409442575549 2025-05-05            2025-05-05         FALSE   TRUE   </span></span>
-<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2 706974528463 2021-11-22            2021-11-22         FALSE   TRUE   </span></span>
-<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 509234825308 2018-08-30            2018-08-30         FALSE   TRUE   </span></span>
-<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4 732715981647 2020-08-24            2020-08-24         FALSE   TRUE   </span></span>
-<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5 240771768588 2013-01-21            2013-01-21         FALSE   TRUE   </span></span>
-<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 6 763443077148 2016-07-03            2016-07-03         FALSE   TRUE   </span></span>
-<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 7 298944792608 2014-09-05            2014-09-05         FALSE   TRUE   </span></span>
-<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 8 498989088479 2020-11-26            2020-11-26         FALSE   TRUE</span></span></code></pre></div>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">lpr =</span> lpr,</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">hsr =</span> hsr,</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">lab_forsker =</span> lab_forsker,</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">bef =</span> bef,</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">lmdb =</span> lmdb</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>classified_diabetes</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; # Source:   SQL [?? x 5]</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; # Database: DuckDB 1.5.2 [luke@Linux 6.17.0-35-generic:R 4.6.0//tmp/RtmpLsvVvc/duckplyr/duckplyr1cd2c1f4accdb.duckdb]</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   pnr          stable_inclusion_date raw_inclusion_date has_t1d has_t2d</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   &lt;chr&gt;        &lt;date&gt;                &lt;date&gt;             &lt;lgl&gt;   &lt;lgl&gt;  </span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1 706974528463 2009-11-02            2009-11-02         FALSE   TRUE   </span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2 409442575549 2005-09-26            2005-09-26         FALSE   TRUE   </span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 240771768588 2020-09-28            2020-09-28         FALSE   TRUE   </span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4 732715981647 2016-12-19            2016-12-19         FALSE   TRUE   </span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5 268855747490 2016-06-25            2016-06-25         FALSE   TRUE   </span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 6 298944792608 2005-09-12            2005-09-12         FALSE   TRUE   </span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 7 498989088479 2013-06-05            2013-06-05         FALSE   TRUE</span></span></code></pre></div>
 </div>
-<p>Just by pure chance, there are 8 simulated individuals that get classified into diabetes status. This is mainly because we’ve created the simulated data to over-represent the values in the variables included in the algorithm that will lead to classifying into diabetes status.</p>
-<p>In a real scenario, the register data is probably too big to read into memory before being converted into a <code>duckdb_tibble</code>. Therefore, we recommend that users first convert the individual register files into <code>.parquet</code> format on disk, with each register source contained in separate folders (e.g. all files from <code>kontakter</code> in one folder, <code>diagnoser</code> in another, <code>lpr_diag</code> in a third folder etc.). With the <code>arrow</code> package, each register data source can then be read in as a single <code>duckdb_tibble</code> by pointing the following code snippet to each of the Parquet folders. E.g. to load in <code>diagnoser</code>:</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>diagnoser <span class="ot">&lt;-</span> diagnoser_parquet_folder <span class="sc">|&gt;</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  arrow<span class="sc">::</span><span class="fu">open_dataset</span>(<span class="at">unify_schemas =</span> <span class="cn">TRUE</span>) <span class="sc">|&gt;</span></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  arrow<span class="sc">::</span><span class="fu">to_duckdb</span>()</span></code></pre></div>
-<p>And that’s all there is to this package! You can now save this dataset as a Parquet file for you or your collaborators on your DST project to use these classifications.</p>
+<p>As seen above, this returns a DuckDB table with the individuals classified as having either T1D or T2D along with the date of the classification. Each of the columns in the output is explained in <a href="#sec-understanding-the-output" class="quarto-xref">Section 2.5.1</a> below.</p>
+<h3 id="step-5-optional-collect-the-results-into-r">Step 5 (optional): Collect the results into R</h3>
+<p>Because the data is stored in DuckDB, the result above is a <em>lazy</em> reference to a database query, i.e., the data has not been loaded into R’s memory. To bring the results into R as a regular data frame, use <code>dplyr::collect()</code>:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>classified_diabetes <span class="ot">&lt;-</span> classified_diabetes <span class="sc">|&gt;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">collect</span>()</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>classified_diabetes</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; # A tibble: 7 × 5</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   pnr          stable_inclusion_date raw_inclusion_date has_t1d has_t2d</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   &lt;chr&gt;        &lt;date&gt;                &lt;date&gt;             &lt;lgl&gt;   &lt;lgl&gt;  </span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1 268855747490 2016-06-25            2016-06-25         FALSE   TRUE   </span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2 409442575549 2005-09-26            2005-09-26         FALSE   TRUE   </span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 732715981647 2016-12-19            2016-12-19         FALSE   TRUE   </span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4 240771768588 2020-09-28            2020-09-28         FALSE   TRUE   </span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5 298944792608 2005-09-12            2005-09-12         FALSE   TRUE   </span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 6 498989088479 2013-06-05            2013-06-05         FALSE   TRUE   </span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 7 706974528463 2009-11-02            2009-11-02         FALSE   TRUE</span></span></code></pre></div>
+</div>
+<p>Now, we can see that with the simulated data, 7 individuals are classified as having diabetes.</p>
+<h4 id="sec-understanding-the-output">Understanding the output</h4>
+<p>The output is a table with one row per classified individual and five columns:</p>
+<table class="caption-top">
+<colgroup>
+<col style="width: 16%">
+<col style="width: 83%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Column</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>pnr</code></td>
+<td>The pseudonymised personal identification number.</td>
+</tr>
+<tr class="even">
+<td><code>stable_inclusion_date</code></td>
+<td>The date of the second inclusion event, if on or after <code>stable_inclusion_start_date</code> (default: 1998). <code>NA</code> for earlier dates.</td>
+</tr>
+<tr class="odd">
+<td><code>raw_inclusion_date</code></td>
+<td>The date of the second inclusion event without setting <code>NA</code> for date earlier than the <code>stable_inclusion_start_date</code>.</td>
+</tr>
+<tr class="even">
+<td><code>has_t1d</code></td>
+<td><code>TRUE</code> if classified as type 1 diabetes, <code>FALSE</code> otherwise.</td>
+</tr>
+<tr class="odd">
+<td><code>has_t2d</code></td>
+<td><code>TRUE</code> if classified as type 2 diabetes, <code>FALSE</code> otherwise.</td>
+</tr>
+</tbody>
+</table>
+<div>
+<blockquote>
+<p><strong>About <code>stable_inclusion_date</code> vs <code>raw_inclusion_date</code></strong></p>
+<p>The <code>raw_inclusion_date</code> is simply the date of the second qualifying event. However, for events before 1998, the register data may not have sufficient coverage to reliably distinguish new (incident) cases from existing (prevalent) ones. The <code>stable_inclusion_date</code> column is set to <code>NA</code> for these earlier dates to flag this uncertainty.</p>
+<p>The <code>classify_diabetes()</code> function includes a <code>stable_inclusion_start_date</code> parameter that is <code>01-01-1988</code> by default. This means that you can change the date for when the classification is considered stable</p>
+</blockquote>
+</div>
+<p>For more information about the output, see the Interface section under <code>vignette(&quot;design&quot;)</code>.</p>
+<h3 id="step-6-saving-the-results">Step 6: Saving the results</h3>
+<p>Once you have the classification results, you can save them as a Parquet file for yourself or your collaborators on your DST project:</p>
 <div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>classified_diabetes <span class="sc">|&gt;</span></span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  duckplyr<span class="sc">::</span><span class="fu">as_duckdb_tibble</span>() <span class="sc">|&gt;</span></span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  duckplyr<span class="sc">::</span><span class="fu">compute_parquet</span>(</span>
 <span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;classified_diabetes.parquet&quot;</span></span>
 <span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div>
+<h2 id="sec-working-with-real-register-data">Working with real register data</h2>
+<p>In a real-world scenario, the register data is too large to read into memory all at once. We recommend converting your register files into <a href="https://parquet.apache.org/">Parquet</a> format on disk, with each register in its own folder (e.g., all <code>lmdb</code> files in one folder, all <code>lab_forsker</code> files in another, etc.).</p>
+<div>
+<blockquote>
+<p><strong>Tip</strong></p>
+<p>To convert SAS (<code>.sas7bdat</code>) files to Parquet, you can use the <a href="https://dp-next.github.io/fastreg/"><code>fastreg</code></a> package.</p>
+</blockquote>
+</div>
+<p>If you’re working on Statistics Denmark’s (DST) server, be aware that the pre-installed R packages can be quite old (for example, at the time of writing, <code>library(duckplyr)</code> loads version 0.4 of the duckplyr package from 2024, whereas the latest version on CRAN is &gt;1.1 from 2026). These old versions don’t support the dplyr operations necessary for osdc to work.</p>
+<p>Installing osdc with <code>install.packages(&quot;osdc&quot;)</code> should force the necessary updates of package dependencies. Otherwise, the latest version of any given package can be installed from DST’s local CRAN mirror by using <code>install.packages()</code>. The downside of this approach is that you have to repeat the package installations frequently (whenever you log on to a new virtual machine, or after the servers weekly reset).</p>
+<p>After making sure that you have the newest version of osdc installed (which should install/update any necessary dependencies), you can load each register directly from its Parquet folder and convert it to DuckDB, as shown below.</p>
+<p>Currently, the conversion to DuckDB requires that the user specifies some connection parameters first:</p>
+<ul>
+<li>the maximum amount of memory to be allocated for DuckDB data, e.g. 128GB which is stable and should be more than enough to hold the inputs to osdc in DuckDB</li>
+<li>where to temporarily store any DuckDB data that exceeds this threshold.</li>
+</ul>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>ddb_driver <span class="ot">&lt;-</span> duckdb<span class="sc">::</span><span class="fu">duckdb</span>(<span class="at">config =</span> <span class="fu">list</span>(</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">memory =</span> <span class="st">&quot;128GB&quot;</span>,</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">temp_dir =</span> <span class="st">&quot;path/to/temp/dir&quot;</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>))</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>ddb_con <span class="ot">&lt;-</span> DBI<span class="sc">::</span><span class="fu">dbConnect</span>(ddb_driver)</span></code></pre></div>
+<p>If you’re working with very large data sets, it’s good practice to filter the data on the Arrow side before converting to DuckDB to reduce computation and memory use. Conveniently, most of dplyr’s filtering and selection operations are supported by the arrow package. If you need to rename variables or convert their types to match the inputs expected by osdc, you can do that too:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>lpr3f_diagnoser <span class="ot">&lt;-</span> <span class="st">&quot;path/to/lpr3f_diagnoser_parquet_folder&quot;</span> <span class="sc">|&gt;</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  arrow<span class="sc">::</span><span class="fu">open_dataset</span>(<span class="at">unify_schemas =</span> <span class="cn">TRUE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Insert dplyr filtering and variable selection/renaming steps here, e.g.:</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="co"># dplyr::select(...) |&gt;</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  <span class="co"># dplyr::mutate(...) |&gt;</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  <span class="co"># dplyr::filter(...) |&gt;</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  arrow<span class="sc">::</span><span class="fu">to_duckdb</span>(<span class="at">con =</span> ddb_con) <span class="sc">|&gt;</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">compute</span>()</span></code></pre></div>
+<p>If your data (or parts of it) is already in R (e.g., as a <code>data.frame</code>), you can convert it to a DuckDB table with:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>lpr3f_diagnoser <span class="ot">&lt;-</span> lpr3f_diagnoser <span class="sc">|&gt;</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  arrow<span class="sc">::</span><span class="fu">to_duckdb</span>(<span class="at">con =</span> ddb_con) <span class="sc">|&gt;</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">compute</span>()</span></code></pre></div>
+<div>
+<blockquote>
+<p><strong>Important</strong></p>
+<p>Important notes on using <code>lpr3a</code> data!</p>
+<p>A: <code>lpr3a</code> contains duplicates of contacts in 2017 &amp; 2018 that are also contained in <code>lpr2</code>. These rows must be filtered out before being input to osdc’s <code>prepare_lpr3a()</code> function.</p>
+<p>B: The <code>kont_starttidspunkt</code> variable in <code>lpr3a</code> is a <code>datetime</code> type, and must be converted to a <code>date</code> before being input to <code>prepare_lpr3a()</code>.</p>
+</blockquote>
+</div>
+<p>The duplicate rows in <code>lpr3a_kontakt</code> can be removed during processing by filtering to <code>indberetningssystem == &quot;LPR3&quot;</code> Similarly, the <code>kont_starttidspunkt</code> variable in <code>lpr3a</code> can be converted to a <code>date</code> in a single call to <code>dplyr::mutate()</code> during pre-processing in Arrow. e.g.:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>lpr3a_kontakt <span class="ot">&lt;-</span> <span class="st">&quot;path/to/lpr3a_kontakt_parquet_folder&quot;</span> <span class="sc">|&gt;</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  arrow<span class="sc">::</span><span class="fu">open_dataset</span>(<span class="at">unify_schemas =</span> <span class="cn">TRUE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="co"># dplyr::select(...) |&gt;</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">kont_starttidspunkt =</span> <span class="fu">as.Date</span>(kont_starttidspunkt)) <span class="sc">|&gt;</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">filter</span>(indberetningssystem <span class="sc">==</span> <span class="st">&quot;LPR3&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  arrow<span class="sc">::</span><span class="fu">to_duckdb</span>(<span class="at">con =</span> ddb_con) <span class="sc">|&gt;</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">compute</span>()</span></code></pre></div>
+<p>This can be used as input to <code>prepare_lpr3a()</code>:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>lpr <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">prepare_lpr2</span>(lpr_adm, lpr_diag),</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">prepare_lpr3f</span>(lpr3f_kontakter, lpr3f_diagnoser),</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">prepare_lpr3a</span>(lpr3a_kontakt, lpr3a_diagnose)</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">join_registers</span>()</span></code></pre></div>
+<p>Most inputs will work in the Arrow/DuckDB equivalent of their type in the original SAS file. Unless the SAS-to-Arrow conversion introduced unexpected types, you should should not need to do any further type conversion.</p>
+<p>Once you’re done using DuckDB, you should close the driver and connection like so:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>duckdb<span class="sc">::</span><span class="fu">duckdb_shutdown</span>(ddb_driver)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>DBI<span class="sc">::</span><span class="fu">dbDisconnect</span>(ddb_con)</span></code></pre></div>
+<h2 id="getting-help">Getting help</h2>
+<p>If you encounter a bug or have a question about how to use osdc, please open an issue on the <a href="https://github.com/steno-aarhus/osdc/issues">GitHub repository</a>. When reporting a bug, include a minimal example that reproduces the problem along to help us understand and investigate the problem.</p>
 
 
 

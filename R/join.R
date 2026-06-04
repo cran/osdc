@@ -1,3 +1,34 @@
+#' Join prepared registers
+#'
+#' @param register_list A list of the prepared registers, from e.g.
+#'  [prepare_lpr2()].
+#'
+#' @returns A single object with all rows from each register in `register_list`.
+#'
+#' @export
+#' @examples
+#' register_data <- simulate_registers(c(
+#'   "lpr_adm",
+#'   "lpr_diag",
+#'   "lpr3f_kontakter",
+#'   "lpr3f_diagnoser",
+#'   "sssy",
+#'   "sysi"
+#' ))
+#' join_registers(list(
+#'   prepare_lpr2(register_data$lpr_adm, register_data$lpr_diag),
+#'   prepare_lpr3f(
+#'     register_data$lpr3f_kontakter,
+#'     register_data$lpr3f_diagnoser
+#'   )
+#' ))
+#' join_registers(list(register_data$sysi, register_data$sssy))
+join_registers <- function(register_list) {
+  checkmate::assert_list(register_list)
+  register_list |>
+    purrr::reduce(dplyr::union)
+}
+
 #' Join kept inclusion events.
 #'
 #' @description
@@ -15,16 +46,16 @@
 #' first and second purchase of a glucose-lowering drug (after excluding
 #' purchases potentially related to polycystic ovary syndrome or gestational diabetes).
 #'
-#' @param diabetes_diagnoses Output from [keep_diabetes_diagnoses()].
-#' @param podiatrist_services Output from [keep_podiatrist_services()].
-#' @param gld_hba1c_after_drop_steps Output from [drop_pregnancies()] and
-#'    [drop_pcos()].
+#' @param diabetes_diagnoses Output from the internal `keep_diabetes_diagnoses()`.
+#' @param podiatrist_services Output from the internal `keep_podiatrist_services()`.
+#' @param gld_hba1c_after_drop_steps Output from the internal `drop_pregnancies()` and
+#'   `drop_pcos()`.
 #'
 #' @returns The same type as the input data, as a [duckplyr::duckdb_tibble()],
-#'   with the joined columns from the output of [keep_diabetes_diagnoses()],
-#'   [keep_podiatrist_services()], [drop_pcos()], and
-#'   [drop_pregnancies()]. There will be 1-8 rows per `pnr`.
-#' @keywords internal
+#'  with the joined columns from the output of the input. There will be 1-8
+#'  rows per `pnr`.
+#'
+#' @noRd
 #' @inherit algorithm seealso
 join_inclusions <- function(
   diabetes_diagnoses,

@@ -4,7 +4,7 @@ sim_data <- registers() |>
 cases <- edge_cases()
 nc <- non_cases()
 
-join_registers <- function(name) {
+join_test_data <- function(name) {
   dplyr::bind_rows(
     cases[[name]],
     sim_data[[name]],
@@ -15,20 +15,27 @@ join_registers <- function(name) {
 cases_vs_nc <- sim_data |>
   names() |>
   purrr::map(\(name) {
-    list(join_registers(name)) |>
+    list(join_test_data(name)) |>
       rlang::set_names(name)
   }) |>
   purrr::flatten() |>
   purrr::map(duckplyr::as_duckdb_tibble) |>
   purrr::map(duckplyr::as_tbl)
 
+# join_registers() uses dplyr::union() to remove duplicate rows, and since
+# all the test and simulated data in lpr3f is also in lpr3a,
+# joining all three works fine:
+lpr <- join_registers(list(
+  prepare_lpr2(cases_vs_nc$lpr_adm, cases_vs_nc$lpr_diag),
+  prepare_lpr3f(cases_vs_nc$lpr3f_kontakter, cases_vs_nc$lpr3f_diagnoser),
+  prepare_lpr3a(cases_vs_nc$lpr3a_kontakt, cases_vs_nc$lpr3a_diagnose)
+))
+
+hsr <- join_registers(list(cases_vs_nc$sssy, cases_vs_nc$sysi))
+
 actual <- classify_diabetes(
-  kontakter = cases_vs_nc$kontakter,
-  diagnoser = cases_vs_nc$diagnoser,
-  lpr_diag = cases_vs_nc$lpr_diag,
-  lpr_adm = cases_vs_nc$lpr_adm,
-  sysi = cases_vs_nc$sysi,
-  sssy = cases_vs_nc$sssy,
+  lpr = lpr,
+  hsr = hsr,
   lab_forsker = cases_vs_nc$lab_forsker,
   bef = cases_vs_nc$bef,
   lmdb = cases_vs_nc$lmdb
@@ -52,4 +59,26 @@ test_that("expected non-cases are not classified", {
     unique()
 
   expect_identical(expected_pnrs, character(0))
+})
+
+test_that("Test that classification works with lpr data from only lpr2 and lpr3a", {
+  lpr <- join_registers(list(
+    prepare_lpr2(cases_vs_nc$lpr_adm, cases_vs_nc$lpr_diag),
+    prepare_lpr3a(cases_vs_nc$lpr3a_kontakt, cases_vs_nc$lpr3a_diagnose)
+  ))
+
+  actual <- classify_diabetes(
+    lpr = lpr,
+    hsr = hsr,
+    lab_forsker = cases_vs_nc$lab_forsker,
+    bef = cases_vs_nc$bef,
+    lmdb = cases_vs_nc$lmdb
+  ) |>
+    dplyr::collect()
+
+  expected <- cases$classified
+  actual_cases <- actual |>
+    dplyr::filter(grepl("\\d{2}_", .data$pnr)) |>
+    dplyr::arrange(pnr)
+  expect_identical(actual_cases, expected)
 })

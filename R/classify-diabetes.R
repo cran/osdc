@@ -6,12 +6,9 @@
 #' that data source, or at least the years you have and are interested
 #' in.
 #'
-#' @param kontakter The contacts information table from the LPR3 patient register
-#' @param diagnoser The diagnoses information table from the LPR3 patient register
-#' @param lpr_diag The diagnoses information table from the LPR2 patient register
-#' @param lpr_adm The administrative information table from the LPR2 patient register
-#' @param sysi The SYSI table from the health service register
-#' @param sssy The SSSY table from the health service register
+#' @param lpr The unified LPR register, see [join_registers()]
+#' @param hsr The unified health services registers (SYSI and SSSY), see
+#'  [join_registers()]
 #' @param lab_forsker The register for laboratory results for research
 #' @param bef The BEF table from the civil register
 #' @param lmdb The LMDB table from the prescription register
@@ -27,36 +24,11 @@
 #' @returns The same object type as the input data, which would be a
 #'    [duckplyr::duckdb_tibble()] type object.
 #' @export
-#' @seealso See the [osdc] vignette for a detailed
-#'   description of the internal implementation of this classification function.
-#'
-#' @examples
-#' # Can't run this multiple times, will cause an error as the table
-#' # has already been created in the DuckDB connection.
-#' register_data <- registers() |>
-#'   names() |>
-#'   simulate_registers() |>
-#'   purrr::map(duckplyr::as_duckdb_tibble) |>
-#'   purrr::map(duckplyr::as_tbl)
-#'
-#' classify_diabetes(
-#'   kontakter = register_data$kontakter,
-#'   diagnoser = register_data$diagnoser,
-#'   lpr_diag = register_data$lpr_diag,
-#'   lpr_adm = register_data$lpr_adm,
-#'   sysi = register_data$sysi,
-#'   sssy = register_data$sssy,
-#'   lab_forsker = register_data$lab_forsker,
-#'   bef = register_data$bef,
-#'   lmdb = register_data$lmdb
-#' )
+#' @seealso See the `vignette("osdc", package = "osdc")` vignette for a more
+#'    details and on how to use this function.
 classify_diabetes <- function(
-  kontakter,
-  diagnoser,
-  lpr_diag,
-  lpr_adm,
-  sysi,
-  sssy,
+  lpr,
+  hsr,
   lab_forsker,
   bef,
   lmdb,
@@ -70,50 +42,25 @@ classify_diabetes <- function(
   # way duckplyr works. It creates a temporary DuckDB DB in the background
   # based on the name of the object passed to it.
   registers <- list(
-    kontakter = kontakter,
-    diagnoser = diagnoser,
-    lpr_diag = lpr_diag,
-    lpr_adm = lpr_adm,
-    sysi = sysi,
-    sssy = sssy,
+    lpr = lpr,
+    hsr = hsr,
     lab_forsker = lab_forsker,
     bef = bef,
     lmdb = lmdb
   ) |>
-    purrr::map(verify_duckdb)
+    purrr::discard(is.null) |>
+    purrr::map(check_duckdb)
 
   # Verification step -----
-  kontakter <- select_required_variables(registers$kontakter, "kontakter")
-  diagnoser <- select_required_variables(registers$diagnoser, "diagnoser")
-  lpr_diag <- select_required_variables(registers$lpr_diag, "lpr_diag")
-  lpr_adm <- select_required_variables(registers$lpr_adm, "lpr_adm")
-  sysi <- select_required_variables(registers$sysi, "sysi")
-  sssy <- select_required_variables(registers$sssy, "sssy")
-  lab_forsker <- select_required_variables(registers$lab_forsker, "lab_forsker")
-  bef <- select_required_variables(registers$bef, "bef")
-  lmdb <- select_required_variables(registers$lmdb, "lmdb")
+  registers <- registers |>
+    purrr::imap(\(table, name) select_required_variables(table, name))
 
   # Initially processing -----
-  lpr2 <- prepare_lpr2(
-    lpr_diag = lpr_diag,
-    lpr_adm = lpr_adm
-  )
 
-  lpr3 <- prepare_lpr3(
-    kontakter = kontakter,
-    diagnoser = diagnoser
-  )
-
-  pregnancy_dates <- keep_pregnancy_dates(
-    lpr2 = lpr2,
-    lpr3 = lpr3
-  )
+  pregnancy_dates <- keep_pregnancy_dates(lpr = lpr)
 
   # Keep steps -----
-  diabetes_diagnoses <- keep_diabetes_diagnoses(
-    lpr2 = lpr2,
-    lpr3 = lpr3
-  ) |>
+  diabetes_diagnoses <- keep_diabetes_diagnoses(lpr = lpr) |>
     add_t1d_diagnoses_cols() |>
     dplyr::select(
       -c(
@@ -127,22 +74,19 @@ classify_diabetes <- function(
       )
     )
 
-  podiatrist_services <- keep_podiatrist_services(
-    sysi = sysi,
-    sssy = sssy
-  )
+  podiatrist_services <- keep_podiatrist_services(hsr = registers$hsr)
 
   gld_purchases <- keep_gld_purchases(
-    lmdb = lmdb
+    lmdb = registers$lmdb
   )
 
   hba1c_over_threshold <- keep_hba1c(
-    lab_forsker = lab_forsker
+    lab_forsker = registers$lab_forsker
   )
 
   # Drop steps -----
   gld_hba1c_after_drop_steps <- gld_purchases |>
-    drop_pcos(bef = bef) |>
+    drop_pcos(bef = registers$bef) |>
     drop_pregnancies(
       pregnancy_dates = pregnancy_dates,
       included_hba1c = hba1c_over_threshold
@@ -165,13 +109,15 @@ classify_diabetes <- function(
     )
   )
 
-  inclusions |>
+  classified <- inclusions |>
     create_inclusion_dates(stable_inclusion_start_date) |>
     classify_t1d() |>
     # If has_t1d is NA, t2d will also be NA
     dplyr::mutate(has_t2d = !.data$has_t1d) |>
     # Drop those who don't have either type of diabetes
-    dplyr::filter(!(is.na(.data$has_t1d) & is.na(.data$has_t2d))) |>
+    dplyr::filter(!(is.na(.data$has_t1d) & is.na(.data$has_t2d)))
+
+  classified |>
     dplyr::select(
       "pnr",
       "stable_inclusion_date",
@@ -181,7 +127,16 @@ classify_diabetes <- function(
     )
 }
 
-verify_duckdb <- function(data, call = rlang::caller_env()) {
+#' Check that data is a DuckDB connection
+#'
+#' @param data Data to be checked. A `tbl_duckdb_connection` or
+#' `duckdb_connection` object.
+#' @param call The environment of the calling function, used to make error
+#'   messages point to the user-facing function rather than this internal check.
+#'
+#' @returns The data, if it is a DuckDB connection. Errors if not.
+#' @noRd
+check_duckdb <- function(data, call = rlang::caller_env()) {
   check <- checkmate::test_multi_class(
     data,
     classes = c(
@@ -208,7 +163,7 @@ verify_duckdb <- function(data, call = rlang::caller_env()) {
 #'
 #' @return The same object type as the input data, which would be a
 #'    [duckplyr::duckdb_tibble()] type object.
-#' @keywords internal
+#' @noRd
 classify_t1d <- function(data) {
   logic <- c(
     "has_t1d"

@@ -10,7 +10,7 @@
 #'
 #' @return Outputs the register with only the required variables, and
 #'   with column names in lower case.
-#' @keywords internal
+#' @noRd
 select_required_variables <- function(
   data,
   register,
@@ -28,10 +28,10 @@ select_required_variables <- function(
 
 #' Convert column names to lower case
 #'
-#' @param data An data frame type object.
+#' @param data A data frame type object.
 #'
 #' @return The same object type given.
-#' @keywords internal
+#' @noRd
 column_names_to_lower <- function(data) {
   # Needs to be a named vector for renaming.
   lower_column_names <- colnames(data) |>
@@ -47,12 +47,12 @@ column_names_to_lower <- function(data) {
 #' @inheritParams get_register_abbrev
 #'
 #' @inherit select_required_variables return
-#' @keywords internal
+#' @noRd
 check_data_types <- function(data, register, call = rlang::caller_env()) {
   checkmate::assert_choice(register, get_register_abbrev())
 
   # Get register variables and their expected data type(s).
-  expected <- registers()[[register]]$variables |>
+  expected <- c(registers(), joined_registers())[[register]]$variables |>
     # If data_type is a list, collapse it into a single string.
     dplyr::mutate(
       expected_data_type = purrr::map_chr(.data$data_type, \(x) {
@@ -68,7 +68,7 @@ check_data_types <- function(data, register, call = rlang::caller_env()) {
 
   actual <- tibble::tibble(
     name = colnames(data_for_types),
-    actual_data_type = purrr::map_chr(data_for_types, class)
+    actual_data_type = purrr::map_chr(data_for_types, ~ class(.x)[1])
   )
 
   # Get mismatched data types.

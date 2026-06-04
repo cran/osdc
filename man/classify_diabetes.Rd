@@ -5,12 +5,8 @@
 \title{Classify diabetes status using Danish registers.}
 \usage{
 classify_diabetes(
-  kontakter,
-  diagnoser,
-  lpr_diag,
-  lpr_adm,
-  sysi,
-  sssy,
+  lpr,
+  hsr,
   lab_forsker,
   bef,
   lmdb,
@@ -18,17 +14,10 @@ classify_diabetes(
 )
 }
 \arguments{
-\item{kontakter}{The contacts information table from the LPR3 patient register}
+\item{lpr}{The unified LPR register, see \code{\link[=join_registers]{join_registers()}}}
 
-\item{diagnoser}{The diagnoses information table from the LPR3 patient register}
-
-\item{lpr_diag}{The diagnoses information table from the LPR2 patient register}
-
-\item{lpr_adm}{The administrative information table from the LPR2 patient register}
-
-\item{sysi}{The SYSI table from the health service register}
-
-\item{sssy}{The SSSY table from the health service register}
+\item{hsr}{The unified health services registers (SYSI and SSSY), see
+\code{\link[=join_registers]{join_registers()}}}
 
 \item{lab_forsker}{The register for laboratory results for research}
 
@@ -56,28 +45,7 @@ Each DuckDB object must contain a single table covering all years of
 that data source, or at least the years you have and are interested
 in.
 }
-\examples{
-# Can't run this multiple times, will cause an error as the table
-# has already been created in the DuckDB connection.
-register_data <- registers() |>
-  names() |>
-  simulate_registers() |>
-  purrr::map(duckplyr::as_duckdb_tibble) |>
-  purrr::map(duckplyr::as_tbl)
-
-classify_diabetes(
-  kontakter = register_data$kontakter,
-  diagnoser = register_data$diagnoser,
-  lpr_diag = register_data$lpr_diag,
-  lpr_adm = register_data$lpr_adm,
-  sysi = register_data$sysi,
-  sssy = register_data$sssy,
-  lab_forsker = register_data$lab_forsker,
-  bef = register_data$bef,
-  lmdb = register_data$lmdb
-)
-}
 \seealso{
-See the \link{osdc} vignette for a detailed
-description of the internal implementation of this classification function.
+See the \code{vignette("osdc", package = "osdc")} vignette for a more
+details and on how to use this function.
 }

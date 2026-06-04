@@ -11,7 +11,7 @@
 #'
 #' @return A named list of 9  [tibble::tibble()] objects, each representing a
 #'   different health register: `bef`, `lmdb`, `lpr_adm`, `lpr_diag`,
-#'   `kontakter`, `diagnoser`, `sysi`, `sssy`, and `lab_forsker`.
+#'   `lpr3a_kontakt`, `lpr3a_diagnose`, `lpr3f_kontakter`, `lpr3f_diagnoser`, `sysi`, `sssy`, and `lab_forsker`.
 #' @export
 #'
 #' @examples
@@ -27,7 +27,10 @@ non_cases <- function() {
     "nc_preg_3", 2, "19800101",
     "nc_preg_4", 2, "19800101",
   ) |>
-    dplyr::mutate(koen = as.integer(.data$koen))
+    dplyr::mutate(
+      koen = as.integer(.data$koen),
+      foed_dato = lubridate::as_date(.data$foed_dato)
+    )
 
   lmdb <- tibble::tribble(
     ~pnr, ~volume, ~eksd, ~atc, ~apk, ~indo,
@@ -38,7 +41,8 @@ non_cases <- function() {
     "nc_preg_2", 10, "20180101", "A10", 5, "0000000",
     "nc_preg_3", 10, "20200101", "A10", 5, "0000000",
     "nc_preg_4", 10, "20200101", "A10", 5, "0000000",
-  )
+  ) |>
+    dplyr::mutate(eksd = lubridate::as_date(.data$eksd))
 
   # LPR2 is before 2019
   lpr_adm <- tibble::tribble(
@@ -50,7 +54,8 @@ non_cases <- function() {
     "nc_preg_2", "08", "1", "20180101",
     "nc_preg_1", "08", "2", "20180101",
     "nc_preg_2", "08", "3", "20180101",
-  )
+  ) |>
+    dplyr::mutate(d_inddto = lubridate::as_date(.data$d_inddto))
 
   lpr_diag <- tibble::tribble(
     ~recnum, ~c_diag, ~c_diagtype,
@@ -62,8 +67,10 @@ non_cases <- function() {
   )
 
   # LPR3 is from 2019 onwards
-  kontakter <- tibble::tribble(
-    ~cpr, ~dw_ek_kontakt, ~hovedspeciale_ans, ~dato_start,
+
+  # LPR_A (superseded LPR_F):
+  lpr3a_kontakt <- tibble::tribble(
+    ~pnr, ~dw_ek_kontakt, ~kont_ans_hovedspec, ~kont_starttidspunkt,
     "nc_pcos_1", "1", "medicinsk endokrinologi", "20210101",
     "nc_pcos_2", "1", "medicinsk endokrinologi", "20190101",
     "nc_pcos_3", "1", "medicinsk endokrinologi", "20190101",
@@ -71,9 +78,34 @@ non_cases <- function() {
     "nc_preg_4", "1", "abc", "20200101",
     "nc_preg_3", "2", "abc", "20200101",
     "nc_preg_4", "3", "abc", "20200101",
+  ) |>
+    dplyr::mutate(
+      kont_starttidspunkt = lubridate::as_date(.data$kont_starttidspunkt)
+    )
+
+  lpr3a_diagnose <- tibble::tribble(
+    ~dw_ek_kontakt, ~diag_kode, ~diag_type, ~senere_afkraeftet,
+    # diagnosis noise (not diabetes)
+    "1", "DI10", "A", "Nej",
+    # Pregnancy
+    "2", "DO00", "A", "Nej",
+    "3", "DZ33", "A", "Nej",
   )
 
-  diagnoser <- tibble::tribble(
+  # LPR_F: deprecated, but same as LPR_A:
+  lpr3f_kontakter <- tibble::tribble(
+    ~pnr, ~dw_ek_kontakt, ~hovedspeciale_ans, ~dato_start,
+    "nc_pcos_1", "1", "medicinsk endokrinologi", "20210101",
+    "nc_pcos_2", "1", "medicinsk endokrinologi", "20190101",
+    "nc_pcos_3", "1", "medicinsk endokrinologi", "20190101",
+    "nc_preg_3", "1", "abc", "20200101",
+    "nc_preg_4", "1", "abc", "20200101",
+    "nc_preg_3", "2", "abc", "20200101",
+    "nc_preg_4", "3", "abc", "20200101",
+  ) |>
+    dplyr::mutate(dato_start = lubridate::as_date(.data$dato_start))
+
+  lpr3f_diagnoser <- tibble::tribble(
     ~dw_ek_kontakt, ~diagnosekode, ~diagnosetype, ~senere_afkraeftet,
     # diagnosis noise (not diabetes)
     "1", "DI10", "A", "Nej",
@@ -109,7 +141,7 @@ non_cases <- function() {
     dplyr::mutate(barnmak = as.integer(.data$barnmak))
 
   lab_forsker <- tibble::tribble(
-    ~patient_cpr, ~samplingdate, ~analysiscode, ~value,
+    ~pnr, ~samplingdate, ~analysiscode, ~value,
     "nc_pcos_1", "20210101", "NPU27300", 48,
     "nc_pcos_2", "20190101", "NPU03835", 6.5,
     "nc_pcos_3", "20190101", "NPU03835", 6.5,
@@ -117,7 +149,8 @@ non_cases <- function() {
     "nc_preg_2", "20180301", "NPU03835", 6.5,
     "nc_preg_3", "20190301", "NPU03835", 6.5,
     "nc_preg_4", "20200301", "NPU27300", 48,
-  )
+  ) |>
+    dplyr::mutate(samplingdate = lubridate::as_date(.data$samplingdate))
 
   # Combine all tibbles into a named list -----
 
@@ -126,8 +159,10 @@ non_cases <- function() {
     lmdb = lmdb,
     lpr_adm = lpr_adm,
     lpr_diag = lpr_diag,
-    kontakter = kontakter,
-    diagnoser = diagnoser,
+    lpr3a_kontakt = lpr3a_kontakt,
+    lpr3a_diagnose = lpr3a_diagnose,
+    lpr3f_kontakter = lpr3f_kontakter,
+    lpr3f_diagnoser = lpr3f_diagnoser,
     sysi = sysi,
     sssy = sssy,
     lab_forsker = lab_forsker
